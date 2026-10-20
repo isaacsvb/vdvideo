@@ -16,6 +16,9 @@ google-generativeai==0.8.3
 # YouTube upload (official Data API v3)
 google-api-python-client==2.158.0
 google-auth-oauthlib==1.2.1
+# Pin cryptography to a version that still ships prebuilt wheels for older
+# macOS (x86_64); newer releases require a source build (Rust + OpenSSL).
+cryptography==44.0.1
 
 # Text-to-speech (free, no API key)
 edge-tts==7.3.1

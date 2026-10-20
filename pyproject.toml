@@ -27,6 +27,8 @@ dependencies = [
     # YouTube upload (official Data API v3)
     "google-api-python-client==2.158.0",
     "google-auth-oauthlib==1.2.1",
+    # Pinned to a version with prebuilt wheels for older macOS (x86_64).
+    "cryptography==44.0.1",
     # Text-to-speech
     "edge-tts==7.3.1",
     # Video / audio (moviepy 2.x renders text via Pillow; no ImageMagick needed)
