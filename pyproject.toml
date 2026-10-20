@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vdvideo"
+version = "0.1.0"
+description = "An all-in-one AI short-video generator: topic in, finished HD short video out."
+readme = "README.md"
+# Upper bound: Pillow 9.5.0 (pinned for moviepy 1.0.3) has no Python 3.12 wheels.
+requires-python = ">=3.11,<3.12"
+license = "MIT"
+keywords = ["ai", "video", "shorts", "tiktok", "text-to-speech", "moviepy", "automation"]
+
+dependencies = [
+    # Web / API
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "streamlit==1.41.1",
+    "pydantic==2.10.4",
+    "pydantic-settings==2.7.1",
+    # HTTP
+    "httpx==0.28.1",
+    "requests==2.32.3",
+    # AI / LLM providers
+    "openai==1.59.6",
+    "google-generativeai==0.8.3",
+    # Text-to-speech
+    "edge-tts==7.3.1",
+    # Video / audio
+    "moviepy==1.0.3",
+    "imageio-ffmpeg==0.5.1",
+    # moviepy 1.0.3 uses Image.ANTIALIAS, removed in Pillow>=10. Pin to 9.x.
+    "Pillow==9.5.0",
+    # Config / utils
+    "toml==0.10.2",
+    "loguru==0.7.3",
+    "numpy==1.26.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "ruff==0.8.4",
+]
+
+[project.scripts]
+vdvideo = "main:main"
+
+[project.urls]
+Repository = "https://github.com/isaacsvb/vdvideo"
+
+[tool.setuptools]
+# The project runs as a set of top-level modules/packages rather than a single
+# importable distribution package; list what we ship explicitly.
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+# --------------------------------------------------------------------------- #
+# Tooling config (consolidated from ruff.toml / pytest.ini)
+# --------------------------------------------------------------------------- #
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+# E402 (module import not at top) is intentional in a few places where import
+# ordering matters (e.g. wiring ffmpeg before importing moviepy); those lines
+# carry explicit `# noqa: E402`.
+extend-select = ["E402", "I", "UP", "B"]
+# Keep `class X(str, Enum)` (works on all 3.11+ without StrEnum); style choice.
+ignore = ["UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+# The Streamlit entrypoint must adjust sys.path before importing app modules.
+"webui/Main.py" = ["E402"]
+# main.py imports after the module docstring usage block.
+"main.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-q"
