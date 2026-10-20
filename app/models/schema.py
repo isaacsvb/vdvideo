@@ -1,6 +1,7 @@
 """Pydantic schemas shared across the app and API."""
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -64,12 +65,22 @@ class TaskState(str, Enum):
     FAILED = "failed"
 
 
+class UploadParams(BaseModel):
+    """Optional YouTube-upload settings attached to a generation job."""
+    enabled: bool = False
+    title: str | None = Field(None, description="Video title; defaults to the topic")
+    description: str = ""
+    tags: list[str] = Field(default_factory=list)
+    privacy_status: str = Field("private", pattern="^(private|unlisted|public)$")
+
+
 class TaskStatus(BaseModel):
     task_id: str
     state: TaskState = TaskState.PENDING
     progress: int = 0            # 0-100
     message: str = ""
     video_path: str | None = None
+    youtube_video_id: str | None = None
     error: str | None = None
 
 
@@ -77,3 +88,14 @@ class ScriptResult(BaseModel):
     """Output of the LLM step."""
     script: str
     search_terms: list[str]
+
+
+class ScheduledJob(BaseModel):
+    """A generation job scheduled to run at a future time."""
+    job_id: str
+    params: VideoParams
+    upload: UploadParams = Field(default_factory=UploadParams)
+    run_at: datetime = Field(..., description="UTC time to run the job")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    done: bool = False
+    task_id: str | None = None

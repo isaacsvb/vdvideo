@@ -21,6 +21,7 @@ from app.models import (
     SubtitlePosition,
     SubtitleStyle,
     TaskState,
+    UploadParams,
     VideoParams,
 )
 from app.task import get_task, run_pipeline_async
@@ -95,6 +96,18 @@ with col_right:
         st.caption("No music found. Drop .mp3 files into `resources/songs/`.")
     bgm_volume = st.slider("Music volume", 0.0, 1.0, 0.15, step=0.01)
 
+    st.subheader("Publish to YouTube")
+    yt_configured = bool(settings.youtube.client_secrets_file)
+    upload_enabled = st.checkbox(
+        "Upload to YouTube when done", value=False, disabled=not yt_configured
+    )
+    if not yt_configured:
+        st.caption("Configure `[youtube] client_secrets_file` to enable uploads.")
+    yt_title = st.text_input("Video title (defaults to topic)", value="", disabled=not upload_enabled)
+    yt_privacy = st.selectbox(
+        "Privacy", ["private", "unlisted", "public"], index=0, disabled=not upload_enabled
+    )
+
 st.divider()
 generate = st.button("🚀 Generate video", type="primary", use_container_width=True, disabled=not topic)
 
@@ -119,7 +132,12 @@ if generate and topic:
         bgm_name=bgm_name,
         bgm_volume=bgm_volume,
     )
-    st.session_state["task_id"] = run_pipeline_async(params)
+    upload = UploadParams(
+        enabled=upload_enabled,
+        title=yt_title or None,
+        privacy_status=yt_privacy,
+    ) if upload_enabled else None
+    st.session_state["task_id"] = run_pipeline_async(params, upload=upload)
 
 # --------------------------------------------------------------------------- #
 # Progress / result
@@ -146,5 +164,7 @@ if task_id:
         video_bytes = Path(status.video_path).read_bytes()
         st.video(video_bytes)
         st.download_button("⬇️ Download MP4", video_bytes, file_name=f"{task_id}.mp4", mime="video/mp4")
+        if status.youtube_video_id:
+            st.markdown(f"📺 **Uploaded to YouTube:** https://youtu.be/{status.youtube_video_id}")
     elif status and status.state is TaskState.FAILED:
         st.error(f"Generation failed: {status.error}")

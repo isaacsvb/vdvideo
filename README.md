@@ -25,6 +25,9 @@ topic → LLM (script + search terms) → stock footage (Pexels/Pixabay)
   subtitle timings; optional OpenAI TTS.
 - **Customizable** voice, speaking rate, subtitle style/position, and music volume.
 - **Both formats:** 1080×1920 (9:16) and 1920×1080 (16:9).
+- **Auto-upload to YouTube** via the official Data API v3 (OAuth) — stable,
+  no fragile browser automation.
+- **Scheduler** to generate (and optionally publish) videos at a future time.
 - **Three interfaces:** Streamlit web UI, FastAPI REST API, and a CLI.
 - **Bundled FFmpeg** via `imageio-ffmpeg` — no system install required.
 
@@ -99,9 +102,13 @@ streamlit run webui/Main.py
 **REST API**
 ```bash
 uvicorn app.router.api:app --reload
-# POST /videos  {"topic": "the benefits of reading", "aspect_ratio": "9:16"}
-# GET  /tasks/{id}            → progress
+# POST /videos   {"topic": "the benefits of reading", "aspect_ratio": "9:16"}
+#                optional: add "upload": {"enabled": true, "privacy_status": "unlisted"}
+# GET  /tasks/{id}            → progress (includes youtube_video_id once uploaded)
 # GET  /tasks/{id}/download   → MP4
+# POST /schedule  {"topic": "...", "run_at": "2026-01-01T12:00:00Z", "upload": {...}}
+# GET  /schedule              → list scheduled jobs
+# DELETE /schedule/{job_id}   → cancel a scheduled job
 ```
 
 **CLI**
@@ -109,6 +116,25 @@ uvicorn app.router.api:app --reload
 python main.py "the benefits of reading"
 python main.py "space exploration" --aspect 16:9 --voice en-US-GuyNeural
 ```
+
+## Publishing to YouTube
+
+Finished videos can be uploaded automatically via the **official YouTube Data
+API v3** (OAuth) — chosen over browser automation because it's stable and
+supported.
+
+1. In Google Cloud Console, enable **YouTube Data API v3** and create an OAuth
+   **Desktop app** credential; download the client-secrets JSON.
+2. Set `[youtube] client_secrets_file` (or `YOUTUBE_CLIENT_SECRETS_FILE`).
+3. Enable "Upload to YouTube" in the UI, or send an `upload` block to the API.
+   The first upload opens a browser once to authorize; the token is then cached.
+
+## Scheduling
+
+Queue a job to run later (the "post on a schedule" workflow): `POST /schedule`
+with a `run_at` timestamp. A lightweight background thread (started with the API)
+runs due jobs and persists them to `storage/schedule.json`, so they survive
+restarts. Each job can include the same `upload` block to publish on completion.
 
 ## Background music
 

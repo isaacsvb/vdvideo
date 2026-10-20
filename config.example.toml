@@ -36,3 +36,14 @@ api_key = ""                 # or env PIXABAY_API_KEY
 provider = "edge"
 # Default voice (edge-tts short name). See `edge-tts --list-voices`.
 default_voice = "en-US-AvaNeural"
+
+[youtube]
+# Optional: auto-upload finished videos to YouTube via the official Data API v3.
+# 1. In Google Cloud Console, enable "YouTube Data API v3" and create an OAuth
+#    "Desktop app" credential, then download the client-secrets JSON.
+# 2. Point client_secrets_file at that file (or set YOUTUBE_CLIENT_SECRETS_FILE).
+# 3. The first upload opens a browser once to authorize; the token is cached.
+client_secrets_file = ""     # or env YOUTUBE_CLIENT_SECRETS_FILE
+token_file = "youtube_token.json"
+privacy_status = "private"   # private | unlisted | public
+category_id = "22"           # 22 = People & Blogs

@@ -57,6 +57,17 @@ class TTSConfig(BaseModel):
     default_voice: str = "en-US-AvaNeural"
 
 
+class YouTubeConfig(BaseModel):
+    # Path to the OAuth client-secrets JSON downloaded from Google Cloud Console
+    # (Desktop app credentials with the YouTube Data API v3 enabled).
+    client_secrets_file: str = ""
+    # Where the cached OAuth token is stored after the first authorization.
+    token_file: str = "youtube_token.json"
+    # Default upload settings.
+    privacy_status: str = "private"  # private | unlisted | public
+    category_id: str = "22"          # 22 = People & Blogs
+
+
 class AppConfig(BaseModel):
     storage_dir: str = "storage"
     keep_intermediate: bool = False
@@ -67,6 +78,7 @@ class Settings(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     material: MaterialConfig = Field(default_factory=MaterialConfig)
     tts: TTSConfig = Field(default_factory=TTSConfig)
+    youtube: YouTubeConfig = Field(default_factory=YouTubeConfig)
 
     @property
     def storage_path(self) -> Path:
@@ -94,7 +106,9 @@ def _apply_env_overrides(data: dict[str, Any]) -> dict[str, Any]:
         ("llm", "gemini", "api_key"): "GEMINI_API_KEY",
         ("material", "pexels", "api_key"): "PEXELS_API_KEY",
         ("material", "pixabay", "api_key"): "PIXABAY_API_KEY",
+        ("youtube", "client_secrets_file"): "YOUTUBE_CLIENT_SECRETS_FILE",
     }
+    data.setdefault("youtube", {})
     for path, env_name in env_map.items():
         val = os.getenv(env_name)
         if val:

@@ -1,6 +1,8 @@
 """Tests for the Pydantic schemas."""
 from __future__ import annotations
 
+from datetime import UTC
+
 import pytest
 from pydantic import ValidationError
 
@@ -73,3 +75,48 @@ class TestSubtitleStyle:
 def test_task_state_enum():
     assert TaskState.PENDING.value == "pending"
     assert {s.value for s in TaskState} == {"pending", "running", "succeeded", "failed"}
+
+
+class TestUploadParams:
+    def test_defaults_disabled(self):
+        from app.models import UploadParams
+
+        u = UploadParams()
+        assert u.enabled is False
+        assert u.privacy_status == "private"
+        assert u.tags == []
+
+    @pytest.mark.parametrize("status", ["private", "unlisted", "public"])
+    def test_valid_privacy(self, status):
+        from app.models import UploadParams
+
+        assert UploadParams(privacy_status=status).privacy_status == status
+
+    def test_invalid_privacy_rejected(self):
+        from app.models import UploadParams
+
+        with pytest.raises(ValidationError):
+            UploadParams(privacy_status="secret")
+
+
+class TestScheduledJob:
+    def test_requires_run_at(self):
+        from app.models import ScheduledJob
+
+        with pytest.raises(ValidationError):
+            ScheduledJob(job_id="j1", params=VideoParams(topic="reading"))
+
+    def test_round_trip_json(self):
+        from datetime import datetime
+
+        from app.models import ScheduledJob
+
+        job = ScheduledJob(
+            job_id="j1",
+            params=VideoParams(topic="reading"),
+            run_at=datetime(2030, 1, 1, tzinfo=UTC),
+        )
+        restored = ScheduledJob.model_validate_json(job.model_dump_json())
+        assert restored.job_id == "j1"
+        assert restored.params.topic == "reading"
+        assert restored.done is False
