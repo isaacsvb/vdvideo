@@ -12,10 +12,17 @@ from pathlib import Path
 
 from loguru import logger
 
+from app.models import SubtitlePosition, SubtitleStyle, VideoParams
+
+# IMPORTANT: import app.util.media *before* moviepy so the bundled ffmpeg binary
+# (imageio-ffmpeg) is registered in the environment first. Keep this ordering;
+# do not let an autoformatter hoist the moviepy imports above it.
+from app.util import media as _media
+
 # moviepy 2.x: everything imports from the top-level `moviepy` package
 # (the old `moviepy.editor` namespace was removed), and effects are classes
 # applied via `with_effects([...])`.
-from moviepy import (  # noqa: E402
+from moviepy import (
     AudioFileClip,
     CompositeAudioClip,
     CompositeVideoClip,
@@ -24,13 +31,6 @@ from moviepy import (  # noqa: E402
     afx,
     concatenate_videoclips,
 )
-
-from app.models import SubtitlePosition, SubtitleStyle, VideoParams
-
-# IMPORTANT: import app.util.media *before* moviepy so the bundled ffmpeg binary
-# (imageio-ffmpeg) is registered in the environment first. Keep this ordering;
-# do not let an autoformatter hoist the moviepy imports above it.
-from app.util import media as _media
 
 
 def _fit_clip(clip: VideoFileClip, width: int, height: int):

@@ -19,7 +19,10 @@ base_url = ""                # optional; for Azure / proxies / one-api
 
 [llm.gemini]
 api_key = ""                 # or env GEMINI_API_KEY
-model = "gemini-1.5-flash"
+# "gemini-flash-latest" tracks the current stable Flash model. To pin a
+# specific one, run: python -c "import google.generativeai as g; g.configure(
+# api_key=...); [print(m.name) for m in g.list_models()]"
+model = "gemini-flash-latest"
 
 [material]
 # Stock-footage provider for b-roll: "pexels" or "pixabay".

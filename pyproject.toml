@@ -81,6 +81,9 @@ ignore = ["UP042"]
 "webui/Main.py" = ["E402"]
 # main.py imports after the module docstring usage block.
 "main.py" = ["E402"]
+# video.py deliberately imports app.util.media *before* moviepy to wire ffmpeg
+# first; keep that order (don't let import-sorting reshuffle it).
+"app/services/video.py" = ["E402", "I001"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

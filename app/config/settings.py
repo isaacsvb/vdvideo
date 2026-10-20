@@ -29,7 +29,9 @@ class OpenAIConfig(BaseModel):
 
 class GeminiConfig(BaseModel):
     api_key: str = ""
-    model: str = "gemini-1.5-flash"
+    # "gemini-flash-latest" is an alias that tracks the current stable Flash
+    # model, so it won't break when a specific version is retired.
+    model: str = "gemini-flash-latest"
 
 
 class LLMConfig(BaseModel):
