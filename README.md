@@ -41,7 +41,12 @@ vdvideo/
 │  └─ task.py        # pipeline orchestration + progress
 ├─ webui/Main.py     # Streamlit UI
 ├─ main.py           # CLI
-├─ resources/songs/  # drop your .mp3 background tracks here
+├─ scripts/
+│  └─ generate_music.py   # synthesize royalty-free background tracks
+├─ resources/songs/       # bundled + user-provided .mp3 tracks
+├─ tests/                 # pytest suite
+├─ Dockerfile
+├─ docker-compose.yml
 ├─ config.example.toml
 └─ requirements.txt
 ```
@@ -54,6 +59,19 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 cp config.example.toml config.toml  # then add your API keys
+```
+
+### Run with Docker (recommended — bundles ffmpeg + ImageMagick)
+
+The Docker image installs `ffmpeg` and `ImageMagick` (with a relaxed policy so
+burned-in subtitles work out of the box) and generates the bundled music at
+build time.
+
+```bash
+# Put your keys in a .env file (OPENAI_API_KEY, PEXELS_API_KEY, ...)
+docker compose up --build
+# UI  → http://localhost:8501
+# API → http://localhost:8000
 ```
 
 ### Configuration
@@ -92,10 +110,36 @@ python main.py "the benefits of reading"
 python main.py "space exploration" --aspect 16:9 --voice en-US-GuyNeural
 ```
 
+## Background music
+
+Three royalty-free ambient tracks are **synthesized from scratch** (no licensing
+restrictions) and ship in `resources/songs/`. Regenerate or extend them with:
+
+```bash
+python scripts/generate_music.py
+```
+
+Drop your own royalty-free `.mp3` files into `resources/songs/` and they appear
+automatically in the UI / CLI. Pick a track with `--bgm-name <file.mp3>` and set
+its level with `--bgm-volume` (or the UI slider).
+
+## Tests
+
+```bash
+pip install -r requirements.txt   # includes pytest
+pytest
+```
+
+The suite covers the deterministic logic — schema validation, aspect-ratio
+dimensions, subtitle `.srt` building/grouping/timing, config/env precedence,
+LLM parsing & provider routing (mocked), and the music/ffmpeg helpers — with all
+external services mocked so no API keys or network are required.
+
 ## Notes
 
-- **Subtitles** are rendered by moviepy's `TextClip`, which needs **ImageMagick**
-  installed on the system. If it's missing, video still renders — just without
-  burned-in captions (the `.srt` file is still produced in the task folder).
+- **Subtitles** are rendered by moviepy's `TextClip`, which needs **ImageMagick**.
+  The Docker image installs and configures it for you. For a local (non-Docker)
+  run without ImageMagick, the video still renders — just without burned-in
+  captions (the `.srt` file is still produced in the task folder).
 - Output and intermediate files go under `storage/` (gitignored).
 - Respect the licences of any stock footage and music you use.

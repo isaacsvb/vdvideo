@@ -1,0 +1,34 @@
+# Run the web UI and the REST API together.
+#   docker compose up --build
+#
+# Then open http://localhost:8501 for the UI (API at http://localhost:8000).
+# Provide API keys via a .env file or the environment (see config.example.toml).
+
+services:
+  webui:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - PEXELS_API_KEY=${PEXELS_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - MATERIAL_PROVIDER=${MATERIAL_PROVIDER:-pexels}
+    volumes:
+      - ./storage:/app/storage
+
+  api:
+    build: .
+    command: >
+      uvicorn app.router.api:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - PEXELS_API_KEY=${PEXELS_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - MATERIAL_PROVIDER=${MATERIAL_PROVIDER:-pexels}
+    volumes:
+      - ./storage:/app/storage
