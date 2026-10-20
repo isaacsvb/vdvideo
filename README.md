@@ -38,12 +38,14 @@ vdvideo/
 ├─ app/
 │  ├─ config/        # settings from config.toml + env vars
 │  ├─ models/        # Pydantic schemas (VideoParams, TaskStatus, …)
-│  ├─ services/      # llm, material, voice, subtitle, video
+│  ├─ services/      # llm, material, voice, subtitle, video, youtube
 │  ├─ router/        # FastAPI app
 │  ├─ util/          # ffmpeg wiring, music helpers
-│  └─ task.py        # pipeline orchestration + progress
+│  ├─ task.py        # pipeline orchestration + progress
+│  ├─ scheduler.py   # background job scheduler (+ scheduler_run.py runner)
+│  └─ scheduler_run.py    # run due scheduled jobs once (for cron)
 ├─ webui/Main.py     # Streamlit UI
-├─ main.py           # CLI
+├─ main.py           # CLI (generate / upload / schedule)
 ├─ scripts/
 │  └─ generate_music.py   # synthesize royalty-free background tracks
 ├─ resources/songs/       # bundled + user-provided .mp3 tracks
@@ -115,6 +117,13 @@ uvicorn app.router.api:app --reload
 ```bash
 python main.py "the benefits of reading"
 python main.py "space exploration" --aspect 16:9 --voice en-US-GuyNeural
+
+# Generate and upload to YouTube when done:
+python main.py "why read daily" --upload --yt-privacy unlisted --yt-title "Read More"
+
+# Schedule generation (+ optional upload) for later:
+python main.py "monday motivation" --schedule "+2h" --upload
+python main.py "new year tips" --schedule "2026-12-31T18:00:00Z"
 ```
 
 ## Publishing to YouTube
@@ -126,15 +135,25 @@ supported.
 1. In Google Cloud Console, enable **YouTube Data API v3** and create an OAuth
    **Desktop app** credential; download the client-secrets JSON.
 2. Set `[youtube] client_secrets_file` (or `YOUTUBE_CLIENT_SECRETS_FILE`).
-3. Enable "Upload to YouTube" in the UI, or send an `upload` block to the API.
-   The first upload opens a browser once to authorize; the token is then cached.
+3. Turn it on in the UI ("Upload to YouTube"), pass `--upload` on the CLI, or
+   send an `upload` block to the API. The first upload opens a browser once to
+   authorize; the token is then cached.
 
 ## Scheduling
 
-Queue a job to run later (the "post on a schedule" workflow): `POST /schedule`
-with a `run_at` timestamp. A lightweight background thread (started with the API)
-runs due jobs and persists them to `storage/schedule.json`, so they survive
-restarts. Each job can include the same `upload` block to publish on completion.
+Queue a job to run later (the "post on a schedule" workflow). Three ways:
+
+- **API:** `POST /schedule` with a `run_at` timestamp (and optional `upload`).
+- **CLI:** `--schedule "+2h"` or `--schedule "2026-12-31T18:00:00Z"`.
+- Jobs persist to `storage/schedule.json` so they survive restarts.
+
+Due jobs are executed by the background thread the **API** starts on launch. If
+you don't run the API, trigger due jobs yourself (e.g. from cron / a systemd
+timer):
+
+```bash
+python -m app.scheduler_run   # runs anything due now, then exits
+```
 
 ## Background music
 
