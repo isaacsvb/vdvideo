@@ -29,11 +29,20 @@ class TestAspectRatio:
 
 class TestVideoParams:
     def test_minimal_defaults(self):
+        from app.models import FitMode
+
         p = VideoParams(topic="reading")
         assert p.aspect_ratio is AspectRatio.PORTRAIT
+        assert p.fit_mode is FitMode.BLUR  # no-crop default
         assert p.max_duration == 60
         assert p.bgm_volume == 0.15
         assert p.subtitles.enabled is True
+
+    def test_fit_mode_from_string(self):
+        from app.models import FitMode
+
+        assert VideoParams(topic="reading", fit_mode="crop").fit_mode is FitMode.CROP
+        assert VideoParams(topic="reading", fit_mode="pad").fit_mode is FitMode.PAD
 
     def test_topic_too_short_rejected(self):
         with pytest.raises(ValidationError):

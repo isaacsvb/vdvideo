@@ -25,6 +25,8 @@ topic → LLM (script + search terms) → stock footage (Pexels/Pixabay)
   subtitle timings; optional OpenAI TTS.
 - **Customizable** voice, speaking rate, subtitle style/position, and music volume.
 - **Both formats:** 1080×1920 (9:16) and 1920×1080 (16:9).
+- **Smart footage fitting:** `blur` (whole clip over a blurred fill — the
+  Reels/Shorts look, nothing cropped; default), `crop`, or `pad` (black bars).
 - **Auto-upload to YouTube** via the official Data API v3 (OAuth) — stable,
   no fragile browser automation.
 - **Scheduler** to generate (and optionally publish) videos at a future time.

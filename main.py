@@ -19,7 +19,7 @@ import re
 import sys
 from datetime import UTC, datetime, timedelta
 
-from app.models import AspectRatio, SubtitlePosition, SubtitleStyle, UploadParams, VideoParams
+from app.models import AspectRatio, FitMode, SubtitlePosition, SubtitleStyle, UploadParams, VideoParams
 from app.task import run_pipeline
 
 _REL_RE = re.compile(r"^\+(\d+)([smhd])$")
@@ -48,6 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--language", default="en")
     p.add_argument("--paragraphs", type=int, default=3)
     p.add_argument("--aspect", choices=["9:16", "16:9"], default="9:16")
+    p.add_argument(
+        "--fit",
+        choices=["blur", "crop", "pad"],
+        default="blur",
+        help="How footage fills the frame: blur fill (default), crop, or black bars.",
+    )
     p.add_argument("--max-duration", type=int, default=60)
     p.add_argument("--voice", default=None)
     p.add_argument("--voice-rate", type=float, default=1.0)
@@ -98,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         language=args.language,
         paragraphs=args.paragraphs,
         aspect_ratio=AspectRatio(args.aspect),
+        fit_mode=FitMode(args.fit),
         max_duration=args.max_duration,
         voice=args.voice,
         voice_rate=args.voice_rate,

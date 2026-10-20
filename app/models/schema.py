@@ -23,6 +23,13 @@ class SubtitlePosition(str, Enum):
     BOTTOM = "bottom"
 
 
+class FitMode(str, Enum):
+    """How source footage is fitted to the target aspect ratio."""
+    CROP = "crop"    # scale to fill, cropping the overflow (no bars, loses edges)
+    BLUR = "blur"    # whole frame centered over a blurred fill (no crop, no bars)
+    PAD = "pad"      # whole frame centered over solid bars (no crop)
+
+
 class SubtitleStyle(BaseModel):
     enabled: bool = True
     font_size: int = 72
@@ -42,6 +49,7 @@ class VideoParams(BaseModel):
 
     # Format
     aspect_ratio: AspectRatio = AspectRatio.PORTRAIT
+    fit_mode: FitMode = FitMode.BLUR  # how footage fills the frame
     max_duration: int = Field(60, ge=10, le=180, description="Target max video length in seconds")
 
     # Voice

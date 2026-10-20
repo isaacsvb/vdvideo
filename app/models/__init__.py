@@ -1,5 +1,6 @@
 from app.models.schema import (
     AspectRatio,
+    FitMode,
     ScheduledJob,
     ScriptResult,
     SubtitlePosition,
@@ -12,6 +13,7 @@ from app.models.schema import (
 
 __all__ = [
     "AspectRatio",
+    "FitMode",
     "ScheduledJob",
     "ScriptResult",
     "SubtitlePosition",

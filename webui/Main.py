@@ -18,6 +18,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.config import get_settings
 from app.models import (
     AspectRatio,
+    FitMode,
     SubtitlePosition,
     SubtitleStyle,
     TaskState,
@@ -70,6 +71,15 @@ with col_left:
         format_func=lambda a: f"{a.value}  ({'vertical' if a is AspectRatio.PORTRAIT else 'horizontal'} HD)",
         horizontal=True,
     )
+    fit_mode = st.radio(
+        "Footage fit",
+        [FitMode.BLUR, FitMode.CROP, FitMode.PAD],
+        format_func=lambda m: {
+            FitMode.BLUR: "Blur fill — show the whole clip, blurred background (recommended)",
+            FitMode.CROP: "Crop — fill the frame, trimming the edges",
+            FitMode.PAD: "Pad — show the whole clip with black bars",
+        }[m],
+    )
     max_duration = st.slider("Max duration (seconds)", 10, 180, 60, step=5)
 
 with col_right:
@@ -117,6 +127,7 @@ if generate and topic:
         language=language,
         paragraphs=paragraphs,
         aspect_ratio=aspect,
+        fit_mode=fit_mode,
         max_duration=max_duration,
         voice=voice_name or None,
         voice_rate=voice_rate,

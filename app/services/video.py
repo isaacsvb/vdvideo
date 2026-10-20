@@ -12,7 +12,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from app.models import SubtitlePosition, SubtitleStyle, VideoParams
+from app.models import FitMode, SubtitlePosition, SubtitleStyle, VideoParams
 
 # IMPORTANT: import app.util.media *before* moviepy so the bundled ffmpeg binary
 # (imageio-ffmpeg) is registered in the environment first. Keep this ordering;
@@ -24,6 +24,7 @@ from app.util import media as _media
 # applied via `with_effects([...])`.
 from moviepy import (
     AudioFileClip,
+    ColorClip,
     CompositeAudioClip,
     CompositeVideoClip,
     TextClip,
@@ -33,22 +34,66 @@ from moviepy import (
 )
 
 
-def _fit_clip(clip: VideoFileClip, width: int, height: int):
-    """Scale + center-crop a clip to exactly fill width x height."""
+def _scale_to_fill(clip, width: int, height: int):
+    """Scale + center-crop so the clip exactly fills width x height (crops edges)."""
     target_ratio = width / height
     clip_ratio = clip.w / clip.h
     if clip_ratio > target_ratio:
-        # too wide -> match height, crop width
         scaled = clip.resized(height=height)
         x1 = (scaled.w - width) / 2
         return scaled.cropped(x1=x1, y1=0, x2=x1 + width, y2=height)
-    # too tall -> match width, crop height
     scaled = clip.resized(width=width)
     y1 = (scaled.h - height) / 2
     return scaled.cropped(x1=0, y1=y1, x2=width, y2=y1 + height)
 
 
-def _build_background(clip_paths: list[Path], width: int, height: int, duration: float):
+def _scale_to_fit(clip, width: int, height: int):
+    """Scale so the whole clip fits inside width x height (no crop; may be smaller)."""
+    target_ratio = width / height
+    clip_ratio = clip.w / clip.h
+    if clip_ratio > target_ratio:
+        return clip.resized(width=width)   # limited by width
+    return clip.resized(height=height)      # limited by height
+
+
+def _blur_frame(frame, radius: int = 35):
+    """Gaussian-blur a single RGB frame using Pillow (no extra dependency)."""
+    from PIL import Image, ImageFilter
+
+    img = Image.fromarray(frame).filter(ImageFilter.GaussianBlur(radius))
+    import numpy as np
+
+    return np.array(img)
+
+
+def _fit_clip(clip, width: int, height: int, mode: FitMode):
+    """Fit ``clip`` to width x height according to the chosen FitMode.
+
+    - CROP: fill the frame, cropping the overflow (original behaviour).
+    - BLUR: show the whole frame centered over a blurred, filled copy of itself
+      (the "Reels/Shorts" look — nothing is cropped or left black).
+    - PAD : show the whole frame centered over solid black bars.
+    """
+    if mode is FitMode.CROP:
+        return _scale_to_fill(clip, width, height)
+
+    foreground = _scale_to_fit(clip, width, height).with_position("center")
+
+    if mode is FitMode.PAD:
+        background = ColorClip(size=(width, height), color=(0, 0, 0)).with_duration(clip.duration)
+    else:  # BLUR
+        background = (
+            _scale_to_fill(clip, width, height)
+            .image_transform(_blur_frame)
+            .with_duration(clip.duration)
+        )
+
+    return CompositeVideoClip([background, foreground], size=(width, height)).with_duration(
+        clip.duration
+    )
+
+
+def _build_background(clip_paths: list[Path], width: int, height: int, duration: float, mode: FitMode):
     """Concatenate clips (looping as needed) to cover ``duration`` seconds."""
     segments = []
     total = 0.0
@@ -69,7 +114,7 @@ def _build_background(clip_paths: list[Path], width: int, height: int, duration:
         if take <= 0:
             raw.close()
             break
-        piece = _fit_clip(raw.subclipped(0, take), width, height).without_audio()
+        piece = _fit_clip(raw.subclipped(0, take), width, height, mode).without_audio()
         segments.append(piece)
         total += take
 
@@ -149,7 +194,7 @@ def compose(
     duration = min(params.max_duration, voice_duration + 0.5)
     logger.info(f"Composing {width}x{height} video, duration ~{duration:.1f}s")
 
-    background = _build_background(clip_paths, width, height, duration)
+    background = _build_background(clip_paths, width, height, duration, params.fit_mode)
 
     # --- audio --- (moviepy 2.x: volume/loop are effect classes)
     voice = AudioFileClip(str(voice_path)).with_effects([afx.MultiplyVolume(params.voice_volume)])
