@@ -21,15 +21,16 @@ google-auth-oauthlib==1.2.1
 edge-tts==7.3.1
 
 # Video / audio processing
-moviepy==1.0.3
+# moviepy 2.x renders text via Pillow (no system ImageMagick needed) and
+# ships wheels for Python 3.12.
+moviepy==2.2.1
 imageio-ffmpeg==0.5.1
-# moviepy 1.0.3 uses Image.ANTIALIAS, removed in Pillow>=10. Pin to 9.x.
-Pillow==9.5.0
+Pillow==11.3.0
 
 # Config / utils
 toml==0.10.2
 loguru==0.7.3
-numpy==1.26.4
+numpy==2.2.6
 
 # Testing
 pytest==8.3.4

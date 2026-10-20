@@ -16,9 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Pinned to 3.11 only: Pillow 9.5.0 (required by moviepy 1.0.3) has no
-        # 3.12 support. Revisit when the moviepy/Pillow stack is upgraded.
-        python-version: ["3.11"]
+        python-version: ["3.11", "3.12"]
 
     steps:
       - name: Checkout
@@ -32,8 +30,8 @@ jobs:
 
       # The unit tests mock all external media/AI *calls*, but the app modules
       # still import their libraries at module load, so the full runtime deps
-      # are required for test collection. System ffmpeg/ImageMagick are NOT
-      # needed (no actual rendering happens in the tests).
+      # are required for test collection. No system ffmpeg/ImageMagick needed
+      # (no actual rendering happens in the tests).
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip

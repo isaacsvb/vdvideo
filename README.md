@@ -49,6 +49,7 @@ vdvideo/
 ├─ scripts/
 │  └─ generate_music.py   # synthesize royalty-free background tracks
 ├─ resources/songs/       # bundled + user-provided .mp3 tracks
+├─ resources/fonts/       # bundled TTF for subtitles (DejaVu Sans)
 ├─ tests/                 # pytest suite
 ├─ Dockerfile
 ├─ docker-compose.yml
@@ -66,11 +67,11 @@ pip install -r requirements.txt
 cp config.example.toml config.toml  # then add your API keys
 ```
 
-### Run with Docker (recommended — bundles ffmpeg + ImageMagick)
+### Run with Docker (recommended — bundles ffmpeg)
 
-The Docker image installs `ffmpeg` and `ImageMagick` (with a relaxed policy so
-burned-in subtitles work out of the box) and generates the bundled music at
-build time.
+The Docker image installs `ffmpeg` and generates the bundled music at build
+time. Subtitles render via Pillow using the font bundled in `resources/fonts/`,
+so no ImageMagick or system fonts are needed.
 
 ```bash
 # Put your keys in a .env file (OPENAI_API_KEY, PEXELS_API_KEY, ...)
@@ -182,9 +183,10 @@ external services mocked so no API keys or network are required.
 
 ## Notes
 
-- **Subtitles** are rendered by moviepy's `TextClip`, which needs **ImageMagick**.
-  The Docker image installs and configures it for you. For a local (non-Docker)
-  run without ImageMagick, the video still renders — just without burned-in
-  captions (the `.srt` file is still produced in the task folder).
+- **Python 3.11 or 3.12** supported.
+- **Subtitles** are rendered by moviepy 2.x via **Pillow** — no ImageMagick
+  required. A TTF font ships in `resources/fonts/` so captions render anywhere;
+  if no font is found the video still renders without burned-in captions (the
+  `.srt` file is always produced in the task folder).
 - Output and intermediate files go under `storage/` (gitignored).
 - Respect the licences of any stock footage and music you use.

@@ -11,23 +11,26 @@ from __future__ import annotations
 from pathlib import Path
 
 from loguru import logger
-from moviepy.audio.fx.audio_loop import audio_loop
-from moviepy.editor import (
+
+# moviepy 2.x: everything imports from the top-level `moviepy` package
+# (the old `moviepy.editor` namespace was removed), and effects are classes
+# applied via `with_effects([...])`.
+from moviepy import (  # noqa: E402
     AudioFileClip,
     CompositeAudioClip,
     CompositeVideoClip,
     TextClip,
     VideoFileClip,
+    afx,
     concatenate_videoclips,
 )
-from moviepy.video.fx.resize import resize
 
 from app.models import SubtitlePosition, SubtitleStyle, VideoParams
 
 # IMPORTANT: import app.util.media *before* moviepy so the bundled ffmpeg binary
 # (imageio-ffmpeg) is registered in the environment first. Keep this ordering;
 # do not let an autoformatter hoist the moviepy imports above it.
-from app.util import media as _media  # noqa: F401  (side-effect: sets FFMPEG_BINARY)
+from app.util import media as _media
 
 
 def _fit_clip(clip: VideoFileClip, width: int, height: int):
@@ -36,13 +39,13 @@ def _fit_clip(clip: VideoFileClip, width: int, height: int):
     clip_ratio = clip.w / clip.h
     if clip_ratio > target_ratio:
         # too wide -> match height, crop width
-        scaled = resize(clip, height=height)
+        scaled = clip.resized(height=height)
         x1 = (scaled.w - width) / 2
-        return scaled.crop(x1=x1, y1=0, x2=x1 + width, y2=height)
+        return scaled.cropped(x1=x1, y1=0, x2=x1 + width, y2=height)
     # too tall -> match width, crop height
-    scaled = resize(clip, width=width)
+    scaled = clip.resized(width=width)
     y1 = (scaled.h - height) / 2
-    return scaled.crop(x1=0, y1=y1, x2=width, y2=y1 + height)
+    return scaled.cropped(x1=0, y1=y1, x2=width, y2=y1 + height)
 
 
 def _build_background(clip_paths: list[Path], width: int, height: int, duration: float):
@@ -66,7 +69,7 @@ def _build_background(clip_paths: list[Path], width: int, height: int, duration:
         if take <= 0:
             raw.close()
             break
-        piece = _fit_clip(raw.subclip(0, take), width, height).without_audio()
+        piece = _fit_clip(raw.subclipped(0, take), width, height).without_audio()
         segments.append(piece)
         total += take
 
@@ -74,7 +77,7 @@ def _build_background(clip_paths: list[Path], width: int, height: int, duration:
         raise RuntimeError("Could not build a background track from the downloaded clips.")
 
     bg = concatenate_videoclips(segments, method="compose")
-    return bg.set_duration(duration)
+    return bg.with_duration(duration)
 
 
 def _subtitle_y(position: SubtitlePosition, height: int, txt_h: int) -> int:
@@ -102,24 +105,31 @@ def _parse_srt(srt_path: Path) -> list[tuple[float, float, str]]:
 
 
 def _subtitle_clips(srt_path: Path, style: SubtitleStyle, width: int, height: int):
+    font = _media.default_font()
+    if font is None:
+        logger.warning("No TTF font found for subtitles; skipping burned-in captions.")
+        return []
     clips = []
     for start, end, text in _parse_srt(srt_path):
         try:
+            # moviepy 2.x: font is a path, `font_size` (not fontsize), and text
+            # rendering uses Pillow — no system ImageMagick required.
             txt = TextClip(
-                text,
-                fontsize=style.font_size,
+                font=font,
+                text=text,
+                font_size=style.font_size,
                 color=style.color,
                 stroke_color=style.stroke_color,
                 stroke_width=style.stroke_width,
                 method="caption",
                 size=(int(width * 0.9), None),
-                align="center",
+                text_align="center",
             )
         except Exception as e:  # noqa: BLE001
-            logger.warning(f"TextClip failed (ImageMagick missing?): {e}")
+            logger.warning(f"TextClip failed: {e}")
             return []
         y = _subtitle_y(style.position, height, txt.h)
-        txt = txt.set_position(("center", y)).set_start(start).set_end(end)
+        txt = txt.with_position(("center", y)).with_start(start).with_end(end)
         clips.append(txt)
     return clips
 
@@ -141,25 +151,27 @@ def compose(
 
     background = _build_background(clip_paths, width, height, duration)
 
-    # --- audio ---
-    voice = AudioFileClip(str(voice_path)).volumex(params.voice_volume)
+    # --- audio --- (moviepy 2.x: volume/loop are effect classes)
+    voice = AudioFileClip(str(voice_path)).with_effects([afx.MultiplyVolume(params.voice_volume)])
     audio_tracks = [voice]
     if bgm_path and params.bgm_enabled and bgm_path.exists():
         try:
-            music = AudioFileClip(str(bgm_path)).volumex(params.bgm_volume)
-            music = audio_loop(music, duration=duration)
+            music = AudioFileClip(str(bgm_path)).with_effects([
+                afx.MultiplyVolume(params.bgm_volume),
+                afx.AudioLoop(duration=duration),
+            ])
             audio_tracks.append(music)
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Background music skipped: {e}")
-    final_audio = CompositeAudioClip(audio_tracks).set_duration(duration)
+    final_audio = CompositeAudioClip(audio_tracks).with_duration(duration)
 
     # --- compose video layers ---
     layers = [background]
     if srt_path and params.subtitles.enabled:
         layers.extend(_subtitle_clips(srt_path, params.subtitles, width, height))
 
-    video = CompositeVideoClip(layers, size=(width, height)).set_duration(duration)
-    video = video.set_audio(final_audio)
+    video = CompositeVideoClip(layers, size=(width, height)).with_duration(duration)
+    video = video.with_audio(final_audio)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "final.mp4"

@@ -91,7 +91,7 @@ def _openai_tts(text: str, voice: str, out_path: Path) -> list[WordBoundary]:
 
 
 def _audio_duration(path: Path) -> float:
-    from moviepy.editor import AudioFileClip
+    from moviepy import AudioFileClip
 
     clip = AudioFileClip(str(path))
     try:
