@@ -1,0 +1,38 @@
+# vdvideo configuration
+# Copy this file to `config.toml` and fill in your keys.
+# Any value can also be provided via environment variable (see app/config/settings.py).
+
+[app]
+# Where generated videos and intermediate files are stored.
+storage_dir = "storage"
+# Keep intermediate files (downloaded clips, voiceover, srt) for debugging.
+keep_intermediate = false
+
+[llm]
+# Which provider generates the script + search terms: "openai" or "gemini".
+provider = "openai"
+
+[llm.openai]
+api_key = ""                 # or env OPENAI_API_KEY
+model = "gpt-4o-mini"
+base_url = ""                # optional; for Azure / proxies / one-api
+
+[llm.gemini]
+api_key = ""                 # or env GEMINI_API_KEY
+model = "gemini-1.5-flash"
+
+[material]
+# Stock-footage provider for b-roll: "pexels" or "pixabay".
+provider = "pexels"
+
+[material.pexels]
+api_key = ""                 # or env PEXELS_API_KEY  (free: https://www.pexels.com/api/)
+
+[material.pixabay]
+api_key = ""                 # or env PIXABAY_API_KEY
+
+[tts]
+# "edge" is free and needs no key. "openai" uses the OpenAI key above.
+provider = "edge"
+# Default voice (edge-tts short name). See `edge-tts --list-voices`.
+default_voice = "en-US-AvaNeural"

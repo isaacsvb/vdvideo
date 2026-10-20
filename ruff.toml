@@ -1,0 +1,16 @@
+line-length = 110
+target-version = "py311"
+
+[lint]
+# E402 (module import not at top) is intentional in a few places where import
+# ordering matters (e.g. wiring ffmpeg before importing moviepy); those lines
+# carry explicit `# noqa: E402`.
+extend-select = ["E402", "I", "UP", "B"]
+# Keep `class X(str, Enum)` (works on all 3.11+ without StrEnum); style choice.
+ignore = ["UP042"]
+
+[lint.per-file-ignores]
+# The Streamlit entrypoint must adjust sys.path before importing app modules.
+"webui/Main.py" = ["E402"]
+# main.py imports after the module docstring usage block.
+"main.py" = ["E402"]
